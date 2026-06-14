@@ -17,3 +17,11 @@
 1. `S3KeySensor` ждёт появления файла с данными в S3
 2. `DataprocCreatePysparkJobOperator` запускает Spark-задание
 3. Spark читает Parquet, агрегирует по `payment_type`, пишет в ClickHouse
+
+## Результаты
+
+### DAG успешно выполнен в Airflow
+![Airflow DAG](screenshots/airflow_success.png)
+
+### Результат в ClickHouse / DBeaver
+![DBeaver result](screenshots/dbeaver_result.png)
