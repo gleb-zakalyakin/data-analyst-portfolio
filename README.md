@@ -37,7 +37,7 @@
 
 ---
 
-### 2. A/B‑тест нового алгоритма рекомендаций
+### 2. A/B‑тест нового алгоритма рекомендаций (Python, pandas)
 
 **Папка:** [`ab_testing_product`](https://github.com/gleb-zakalyakin/data-analyst-portfolio/tree/main/ab_testing_product)  
 
