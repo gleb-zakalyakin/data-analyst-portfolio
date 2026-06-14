@@ -1,27 +1,98 @@
-# ETL-пайплайн для агрегации данных о поездках Яндекс Такси по способам оплаты.
+# ETL‑пайплайн для аналитики поездок Яндекс Такси
+
+В этом проекте моделируется сценарий работы аналитика данных в сервисе Яндекс Такси. Ежедневно сервис обрабатывает миллионы поездок с разными способами оплаты, и финансовой и продуктовой командам нужны актуальные данные о выручке и поведении пассажиров.
+
+Цель пайплайна — построить витрину данных, которая агрегирует поездки по каждому способу оплаты (`payment_type`) и считает ключевые метрики:
+- количество поездок;
+- среднюю стоимость поездки (`fare`);
+- средние чаевые (`tips`);
+- суммарную выручку (`trip_total`) по каждому типу оплаты.
+
+Для автоматизации процесса настроен DAG в Apache Airflow. Он ежедневно:
+- проверяет наличие нового файла с данными в объектном хранилище;
+- запускает PySpark‑задачу для обработки и агрегации данных;
+- обновляет итоговую таблицу‑витрину в хранилище.
+
+Полученная таблица служит основой для финансовых отчётов и аналитических дашбордов.
+
+---
 
 ## Стек
+
 - Apache Airflow (оркестрация)
 - PySpark (обработка данных)
-- ClickHouse (хранилище)
+- ClickHouse (хранилище в учебной среде)
 - Yandex Object Storage / S3 (источник данных)
 
-## Как запустить
-1. Скопируй `.env.example` в `.env` и заполни значения
-2. Положи `spark_job.py` в S3: `s3a://bucket/username/jobs/`
-3. Добавь DAG `dag_taxi.py` в папку Airflow DAGs
-4. Настрой Connections в Airflow UI: `clickhouse_default`, `s3`
-5. Запусти DAG `taxi_data_analysis`
+---
 
-## Что делает пайплайн
-1. `S3KeySensor` ждёт появления файла с данными в S3
-2. `DataprocCreatePysparkJobOperator` запускает Spark-задание
-3. Spark читает Parquet, агрегирует по `payment_type`, пишет в ClickHouse
+## Архитектура и логика пайплайна
+
+1. В объектное хранилище (S3‑совместимое) ежедневно попадает Parquet‑файл с данными о поездках.
+2. В Airflow настроен DAG `taxi_data_analysis`, который:
+   - с помощью `S3KeySensor` ждёт появления файла с данными;
+   - после появления файла запускает PySpark‑скрипт через `DataprocCreatePysparkJobOperator`.
+3. PySpark‑скрипт:
+   - читает исходный Parquet‑файл;
+   - группирует данные по `payment_type`;
+   - считает:
+     - количество поездок (`trip_count`);
+     - средний `fare` (`avg_fare`);
+     - средние `tips` (`avg_tips`);
+     - суммарный `trip_total` (`sum_trip_total`);
+   - записывает результат в таблицу `taxi_payment_summary` в ClickHouse.
+4. Таблица `taxi_payment_summary` используется для построения отчётов и дашбордов.
+
+---
+
+## Структура проекта
+
+```text
+airflow-taxi-pipeline/
+├── dags/
+│   └── dag_taxi.py          # DAG Airflow
+├── jobs/
+│   └── spark_job.py         # PySpark-скрипт для агрегации
+├── .env.example             # пример переменных окружения для подключения к БД
+├── .gitignore               # исключение .env и служебных файлов
+└── screenshots/
+    ├── airflow_success.png  # скрин успешного DAG
+    └── dbeaver_result.png   # скрин итоговой таблицы
+```
+
+---
+
+## Как запустить (в учебной / облачной среде)
+
+> В исходном учебном окружении пайплайн работает в Яндекс Облаке (Object Storage + Dataproc + ClickHouse).
+
+1. Скопируй `.env.example` в `.env` и заполни значения для подключения к БД.
+2. Загрузите `jobs/spark_job.py` в S3, например:
+   ```text
+   s3a://bucket/username/jobs/spark_job.py
+   ```
+3. Добавь DAG `dags/dag_taxi.py` в папку `dags/` в инсталляции Airflow.
+4. В Airflow UI настрой `Connections`:
+   - `clickhouse_default` — подключение к ClickHouse;
+   - `s3` — подключение к Object Storage.
+5. В Airflow UI:
+   - активируй DAG `taxi_data_analysis`;
+   - запусти DAG вручную или дождись планового запуска.
+
+> Для локальной проверки логики можно заменить S3 на локальный файл, а ClickHouse — на PostgreSQL и запускать `spark_job.py` напрямую.
+
+---
 
 ## Результаты
 
-### DAG успешно выполнен в Airflow
+### DAG в Airflow
+
+Пайплайн успешно отрабатывает: обе задачи (`wait_for_input_file` и `run_pyspark_job`) завершаются со статусом `success`.
+
 ![Airflow DAG](screenshots/airflow_success.png)
 
-### Результат в ClickHouse / DBeaver
+### Итоговая витрина в ClickHouse / DBeaver
+
+Таблица `taxi_payment_summary` с агрегированными метриками по каждому `payment_type`:
+
 ![DBeaver result](screenshots/dbeaver_result.png)
