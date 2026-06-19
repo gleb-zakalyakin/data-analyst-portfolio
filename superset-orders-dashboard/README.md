@@ -115,7 +115,7 @@
 ##  Превью дашборда
 
 ### Вкладка «Продажи»
-![Продажи](./assets/dashboard_sales.jpg)
+![Продажи](./assets/first_page_superset_marketplace.png)
 
 ### Вкладка «Пользователи»
-![Пользователи](./assets/dashboard_users.jpg)
+![Пользователи](./assets/second_page_superset_marketplace.png)
