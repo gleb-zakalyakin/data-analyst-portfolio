@@ -1,0 +1,22 @@
+# Конфиденциальные сырые выгрузки маркетплейсов
+data/raw/
+
+# Промежуточный кэш данных
+interim/
+processed/
+
+# Кэш Python и Jupyter
+__pycache__/
+*.py[cod]
+*$py.class
+.ipynb_checkpoints/
+
+# Настройки редактора и окружения
+venv/
+.venv/
+.vscode/
+*.log
+
+# Системные файлы
+Thumbs.db
+.DS_Store
